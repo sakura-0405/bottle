@@ -25,7 +25,7 @@ class General(commands.Cog):
     @app_commands.command(name="test_welcome", description="測試歡迎訊息發送")
     async def test_welcome(self, interaction: discord.Interaction):
         # 這裡的 ID 記得換成跟 features.py 一樣的歡迎頻道 ID
-        WELCOME_CHANNEL_ID = 123456789012345678 
+        WELCOME_CHANNEL_ID = 1323404796719403070 
         
         channel = self.bot.get_channel(WELCOME_CHANNEL_ID)
         if not channel:
