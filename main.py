@@ -3,13 +3,14 @@ import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-# 引入我們剛剛寫的保活網頁模塊
 from keep_alive import keep_alive
 
 load_dotenv()
 
+# 1. 設定 Bot 的權限 (Intents)
 intents = discord.Intents.default()
-intents.message_content = True
+intents.message_content = True  # 允許讀取訊息內容（文字指令用）
+intents.members = True          # 🔴 關鍵修正：允許讀取成員事件（歡迎詞必備！）
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -47,9 +48,6 @@ async def main():
         await bot.start(TOKEN)
 
 if __name__ == "__main__":
-    # 在啟動 Bot 之前，先將輕量網頁跑起來
     print("正在啟動保活網頁服務...")
     keep_alive()
-    
-    # 啟動 Discord Bot
     asyncio.run(main())
