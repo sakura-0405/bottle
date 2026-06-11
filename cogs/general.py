@@ -21,5 +21,23 @@ class General(commands.Cog):
         # 回覆使用者
         await interaction.response.send_message(f"🏓 Pong! 延遲時間：{latency}ms")
 
+    # 測試用指令：手動觸發歡迎訊息
+    @app_commands.command(name="test_welcome", description="測試歡迎訊息發送")
+    async def test_welcome(self, interaction: discord.Interaction):
+        # 這裡的 ID 記得換成跟 features.py 一樣的歡迎頻道 ID
+        WELCOME_CHANNEL_ID = 123456789012345678 
+        
+        channel = self.bot.get_channel(WELCOME_CHANNEL_ID)
+        if not channel:
+            await interaction.response.send_message("❌ 找不到該頻道，請檢查 ID 是否正確，或者機器人是否有權限看見該頻道！", ephemeral=True)
+            return
+            
+        try:
+            embed = discord.Embed(title="✨ 測試歡迎訊息 ✨", description=f"如果看到這個，代表機器人有權限在這個頻道發送歡迎詞！", color=discord.Color.green())
+            await channel.send(embed=embed)
+            await interaction.response.send_message("✅ 測試訊息發送成功！", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"❌ 發送失敗，錯誤原因: {e}", ephemeral=True)
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(General(bot))
