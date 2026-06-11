@@ -12,7 +12,7 @@ class Features(commands.Cog):
     async def on_member_join(self, member: discord.Member):
         """當有新成員加入 Discord 伺服器時觸發"""
         # [設定] 請把這裡的 ID 替換成你伺服器的「歡迎頻道 ID」
-        WELCOME_CHANNEL_ID = 1323404796719403071
+        WELCOME_CHANNEL_ID = 1323404796719403070
         
         channel = member.guild.get_channel(WELCOME_CHANNEL_ID)
         if channel:
@@ -34,7 +34,7 @@ class Features(commands.Cog):
         """當成員加入、離開、或移動語音頻道時觸發"""
         
         # [設定] 請把這裡的 ID 替換成你建立的「➕ 點我創房」語音頻道的 ID
-        CREATOR_CHANNEL_ID = 987654321098765432
+        CREATOR_CHANNEL_ID = 1323404796719403071
 
         # 情況 A：成員進入了「➕ 點我創房」頻道
         if after.channel and after.channel.id == CREATOR_CHANNEL_ID:
