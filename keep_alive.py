@@ -69,7 +69,8 @@ MANAGE_TEMPLATE = """
         .section-box { background: #2f3136; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #5865F2; }
         .form-group { margin-bottom: 25px; text-align: left; }
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #b9bbbe; }
-        select, input[type="text"] { width: 100%; padding: 10px; background: #202225; color: white; border: 1px solid #202225; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        select, input[type="text"], textarea { width: 100%; padding: 10px; background: #202225; color: white; border: 1px solid #202225; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        textarea { font-family: inherit; resize: vertical; min-height: 100px; }
         .btn { background: #23a55a; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
         .btn:hover { background: #1a7f43; }
         .btn-add { background: #5865F2; color: white; width: auto; padding: 8px 15px; font-size: 14px; margin-top: 10px; }
@@ -120,8 +121,8 @@ MANAGE_TEMPLATE = """
                     <input type="text" name="role_embed_title" value="{{ current_embed_title }}" placeholder="例如：領取你的自訂身分組！">
                 </div>
                 <div class="form-group">
-                    <label>💬 身分組說明框（Embed）敘述內容</label>
-                    <input type="text" name="role_embed_desc" value="{{ current_embed_desc }}" placeholder="例如：點擊下方按鈕以獲得特定頻道的瀏覽權限。">
+                    <label>💬 身分組說明框（Embed）敘述內容（支援換行與 Discord 語法）</label>
+                    <textarea name="role_embed_desc" placeholder="請點擊下方按鈕領取身分組：&#10;➡️ 遊戲咖：解鎖遊戲聊天專區&#10;➡️ 通知咖：接收最新公告通知">{{ current_embed_desc }}</textarea>
                 </div>
 
                 <div class="form-group">
@@ -164,7 +165,6 @@ MANAGE_TEMPLATE = """
     </div>
 
     <script>
-        // 將後端的身份組清單轉換成 JS 可讀格式，供動態新增時使用
         const rolesData = [
             {% for role in roles %}
                 { id: "{{ role.id }}", name: "{{ role.name }}" },
@@ -243,7 +243,6 @@ def manage(guild_id):
 
     headers = {'Authorization': f"Bot {bot_token}"}
 
-    # 1. 獲取伺服器名稱
     guild_name = "Discord 伺服器"
     try:
         g_res = requests.get(f"{API_ENDPOINT}/guilds/{guild_id}", headers=headers, timeout=5).json()
@@ -251,22 +250,19 @@ def manage(guild_id):
     except Exception as e:
         print(f"[Web 警告] 無法透過 API 獲取伺服器名稱: {e}")
 
-    # 2. 獲取身分組清單 (Roles)
     roles = []
     try:
         roles_res = requests.get(f"{API_ENDPOINT}/guilds/{guild_id}/roles", headers=headers, timeout=5).json()
         if isinstance(roles_res, list):
-            # 過濾掉 @everyone（與伺服器 ID 相同的身分組）以及託管身分組（機器人專用）
             for r in roles_res:
                 if str(r.get('id')) != guild_id and not r.get('managed'):
                     roles.append({"id": str(r.get('id')), "name": r.get('name')})
     except Exception as e:
         print(f"[Web 錯誤] 獲取身分組清單失敗: {e}")
 
-    # 3. 讀取 Firestore 全域設定
     current_welcome = ""
     current_voice = ""
-    current_embed_title = "🍾 自訂身分組領取專區"
+    current_embed_title = "🍾 自訂身分組領取專專區"
     current_embed_desc = "點擊下方對應的按鈕即可領取或移除身分組。"
     current_buttons = []
     
@@ -286,7 +282,6 @@ def manage(guild_id):
         except BaseException as e:
             print(f"[Web ⚠️ 異常強制放行] Firestore 連線無回應，已秒級跳過。原因: {e}")
 
-    # 4. 獲取頻道清單
     print("[Web 記錄] 正在透過 REST API 獲取頻道清單...")
     text_channels = []
     voice_channels = []
@@ -328,14 +323,12 @@ def save_config(guild_id):
     embed_title = request.form.get('role_embed_title')
     embed_desc = request.form.get('role_embed_desc')
     
-    # 🔴 解析動態陣列
     labels = request.form.getlist('btn_label[]')
     roles = request.form.getlist('btn_role[]')
     
-    # 組合按鈕矩陣物件
     role_buttons = []
     for label, role_id in zip(labels, roles):
-        if label.strip() and role_id.strip(): # 過濾空白輸入
+        if label.strip() and role_id.strip():
             role_buttons.append({
                 "label": label.strip(),
                 "role_id": str(role_id).strip()
@@ -353,7 +346,6 @@ def save_config(guild_id):
         }, merge=True)
         print("[Web 記錄] Firestore 更新成功！")
         
-        # 🔴 如果機器人正在線上，即時刷新全域按鈕 View，讓新按鈕立刻免重啟生效
         if discord_bot:
             cog = discord_bot.get_cog("ReactionRoles")
             if cog:
