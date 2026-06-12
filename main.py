@@ -7,10 +7,9 @@ from keep_alive import keep_alive
 
 load_dotenv()
 
-# 1. 設定 Bot 的權限 (Intents)
 intents = discord.Intents.default()
-intents.message_content = True  # 允許讀取訊息內容（文字指令用）
-intents.members = True          # 🔴 關鍵修正：允許讀取成員事件（歡迎詞必備！）
+intents.message_content = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -27,7 +26,7 @@ async def sync(ctx: commands.Context):
     try:
         bot.tree.copy_global_to(guild=ctx.guild)
         synced = await bot.tree.sync(guild=ctx.guild)
-        await ctx.send(f"✅ 成功將 {len(synced)} 個斜線指令同步到此伺服器！請稍等幾秒後輸入 `/` 測試。")
+        await ctx.send(f"✅ 成功將 {len(synced)} 個斜線指令同步到此伺服器！")
     except Exception as e:
         await ctx.send(f"❌ 同步失敗: {e}")
 
@@ -49,5 +48,6 @@ async def main():
 
 if __name__ == "__main__":
     print("正在啟動保活網頁服務...")
-    keep_alive()
+    # 🔴 關鍵修正：將 bot 物件傳給 keep_alive，讓網頁與 Bot 共享資料
+    keep_alive(bot)
     asyncio.run(main())
