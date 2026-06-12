@@ -19,11 +19,18 @@ class RoleButton(discord.ui.Button):
 
         # 如果成員已經有該身分組就移除，沒有就加上（Toggle 功能）
         if role in interaction.user.roles:
-            await interaction.user.remove_roles(role)
-            await interaction.response.send_message(False, f"✅ 已為您移除身分組：**{role.name}**", ephemeral=True)
+            try:
+                await interaction.user.remove_roles(role)
+                # 修正這裡：拿掉原本誤寫的 False，讓文字正確回應
+                await interaction.response.send_message(f"✅ 已為您移除身分組：**{role.name}**", ephemeral=True)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ 機器人權限不足，無法為您移除身分組！請確保機器人身分組排序在該身分組之上。", ephemeral=True)
         else:
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message(f"✅ 已為您領取身分組：**{role.name}**", ephemeral=True)
+            try:
+                await interaction.user.add_roles(role)
+                await interaction.response.send_message(f"✅ 已為您領取身分組：**{role.name}**", ephemeral=True)
+            except discord.Forbidden:
+                await interaction.response.send_message("❌ 機器人權限不足，無法為您發放身分組！請確保機器人身分組排序在該身分組之上。", ephemeral=True)
 
 class RoleView(discord.ui.View):
     def __init__(self, buttons_data):
@@ -76,7 +83,6 @@ class ReactionRoles(commands.Cog):
         view = RoleView(buttons_data)
 
         await interaction.response.send_message("⌛ 正在生成身分組面板...", ephemeral=True)
-        # 在當前頻道發送永久面板
         await interaction.channel.send(embed=embed, view=view)
 
 async def setup(bot):
