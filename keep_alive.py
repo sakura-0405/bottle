@@ -65,47 +65,137 @@ MANAGE_TEMPLATE = """
     <title>管理 - {{ guild_name }}</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #2f3136; color: white; padding: 40px; }
-        .container { max-width: 500px; margin: 0 auto; background: #36393f; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .container { max-width: 650px; margin: 0 auto; background: #36393f; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .section-box { background: #2f3136; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #5865F2; }
         .form-group { margin-bottom: 25px; text-align: left; }
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #b9bbbe; }
-        select { width: 100%; padding: 10px; background: #202225; color: white; border: 1px solid #202225; border-radius: 5px; font-size: 16px; }
+        select, input[type="text"] { width: 100%; padding: 10px; background: #202225; color: white; border: 1px solid #202225; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
         .btn { background: #23a55a; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
         .btn:hover { background: #1a7f43; }
+        .btn-add { background: #5865F2; color: white; width: auto; padding: 8px 15px; font-size: 14px; margin-top: 10px; }
+        .btn-add:hover { background: #4752C4; }
+        .btn-del { background: #ed4245; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-del:hover { background: #c93b3e; }
+        .button-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .back-link { display: block; text-align: center; margin-top: 20px; color: #00b0f4; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>⚙️ 伺服器設定</h2>
+        <h2>⚙️ 伺服器進階設定面板</h2>
         <h4 style="color: #b9bbbe; margin-top: -10px;">{{ guild_name }}</h4>
         <hr style="border-color: #4f545c; margin: 20px 0;">
         
         <form action="/save/{{ guild_id }}" method="POST">
-            <div class="form-group">
-                <label for="welcome_channel">✨ 新成員歡迎文字頻道</label>
-                <select name="welcome_channel" id="welcome_channel">
-                    <option value="">-- 未啟用功能（不發送） --</option>
-                    {% for ch in text_channels %}
-                        <option value="{{ ch.id }}" {% if ch.id == current_welcome %}selected{% endif %}># {{ ch.name }}</option>
-                    {% endfor %}
-                </select>
+            
+            <div class="section-box">
+                <h3 style="margin-top: 0; color: #5865F2;">✨ 基本自動化頻道</h3>
+                <div class="form-group">
+                    <label for="welcome_channel">✨ 新成員歡迎文字頻道</label>
+                    <select name="welcome_channel" id="welcome_channel">
+                        <option value="">-- 未啟用功能（不發送） --</option>
+                        {% for ch in text_channels %}
+                            <option value="{{ ch.id }}" {% if ch.id == current_welcome %}selected{% endif %}># {{ ch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="voice_channel">➕ 動態語音創房頻道（點我創房）</label>
+                    <select name="voice_channel" id="voice_channel">
+                        <option value="">-- 未啟用功能（不創房） --</option>
+                        {% for ch in voice_channels %}
+                            <option value="{{ ch.id }}" {% if ch.id == current_voice %}selected{% endif %}>🔊 {{ ch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="section-box" style="border-left-color: #f5a623;">
+                <h3 style="margin-top: 0; color: #f5a623;">🔘 自訂按鈕領取身分組功能</h3>
+                <p style="font-size: 13px; color: #b9bbbe; margin-top: -5px;">設定完成後，可在 Discord 輸入 <code>/setup_roles</code> 召喚出該功能面板。</p>
+                
+                <div class="form-group">
+                    <label>📝 身分組說明框（Embed）標題</label>
+                    <input type="text" name="role_embed_title" value="{{ current_embed_title }}" placeholder="例如：領取你的自訂身分組！">
+                </div>
+                <div class="form-group">
+                    <label>💬 身分組說明框（Embed）敘述內容</label>
+                    <input type="text" name="role_embed_desc" value="{{ current_embed_desc }}" placeholder="例如：點擊下方按鈕以獲得特定頻道的瀏覽權限。">
+                </div>
+
+                <div class="form-group">
+                    <label>🎛️ 按鈕與對應身分組規則設定</label>
+                    <div id="button-container">
+                        {% if current_buttons %}
+                            {% for btn in current_buttons %}
+                            <div class="button-row">
+                                <input type="text" name="btn_label[]" value="{{ btn.label }}" placeholder="按鈕文字（如：遊戲咖）" style="flex: 2;" required>
+                                <select name="btn_role[]" style="flex: 3;" required>
+                                    <option value="">-- 選擇目標身分組 --</option>
+                                    {% for role in roles %}
+                                        <option value="{{ role.id }}" {% if role.id == btn.role_id %}selected{% endif %}>@ {{ role.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn-del" onclick="removeRow(this)">❌</button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="button-row">
+                                <input type="text" name="btn_label[]" placeholder="按鈕文字（如：公告通知）" style="flex: 2;">
+                                <select name="btn_role[]" style="flex: 3;">
+                                    <option value="">-- 選擇目標身分組 --</option>
+                                    {% for role in roles %}
+                                        <option value="{{ role.id }}">@ {{ role.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn-del" onclick="removeRow(this)">❌</button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-add" onclick="addRow()">➕ 新增按鈕規則</button>
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="voice_channel">➕ 動態語音創房頻道（點我創房）</label>
-                <select name="voice_channel" id="voice_channel">
-                    <option value="">-- 未啟用功能（不創房） --</option>
-                    {% for ch in voice_channels %}
-                        <option value="{{ ch.id }}" {% if ch.id == current_voice %}selected{% endif %}>🔊 {{ ch.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <button type="submit" class="btn">儲存設定</button>
+            <button type="submit" class="btn">💾 儲存所有進階設定</button>
         </form>
         
         <a class="back-link" href="/">← 返回伺服器清單</a>
     </div>
+
+    <script>
+        // 將後端的身份組清單轉換成 JS 可讀格式，供動態新增時使用
+        const rolesData = [
+            {% for role in roles %}
+                { id: "{{ role.id }}", name: "{{ role.name }}" },
+            {% endfor %}
+        ];
+
+        function addRow() {
+            const container = document.getElementById('button-container');
+            const row = document.createElement('div');
+            row.className = 'button-row';
+            
+            let optionsHtml = '<option value="">-- 選擇目標身分組 --</option>';
+            rolesData.forEach(role => {
+                optionsHtml += `<option value="${role.id}">@ ${role.name}</option>`;
+            });
+
+            row.innerHTML = `
+                <input type="text" name="btn_label[]" placeholder="按鈕文字" style="flex: 2;" required>
+                <select name="btn_role[]" style="flex: 3;" required>
+                    ${optionsHtml}
+                </select>
+                <button type="button" class="btn-del" onclick="removeRow(this)">❌</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeRow(btn) {
+            const row = btn.parentElement;
+            row.remove();
+        }
+    </script>
 </body>
 </html>
 """
@@ -151,50 +241,57 @@ def manage(guild_id):
     if not bot_token:
         return "環境變數中缺少 DISCORD_TOKEN，後端無法調用 API", 500
 
-    # 1. 透過標準 HTTP REST API 拉取伺服器名稱
+    headers = {'Authorization': f"Bot {bot_token}"}
+
+    # 1. 獲取伺服器名稱
     guild_name = "Discord 伺服器"
     try:
-        headers = {'Authorization': f"Bot {bot_token}"}
         g_res = requests.get(f"{API_ENDPOINT}/guilds/{guild_id}", headers=headers, timeout=5).json()
         guild_name = g_res.get('name', 'Discord 伺服器')
     except Exception as e:
         print(f"[Web 警告] 無法透過 API 獲取伺服器名稱: {e}")
 
-    # 🔴 2. 你設計的新流程：進入設定先掃描，發現沒有就自動創建！
+    # 2. 獲取身分組清單 (Roles)
+    roles = []
+    try:
+        roles_res = requests.get(f"{API_ENDPOINT}/guilds/{guild_id}/roles", headers=headers, timeout=5).json()
+        if isinstance(roles_res, list):
+            # 過濾掉 @everyone（與伺服器 ID 相同的身分組）以及託管身分組（機器人專用）
+            for r in roles_res:
+                if str(r.get('id')) != guild_id and not r.get('managed'):
+                    roles.append({"id": str(r.get('id')), "name": r.get('name')})
+    except Exception as e:
+        print(f"[Web 錯誤] 獲取身分組清單失敗: {e}")
+
+    # 3. 讀取 Firestore 全域設定
     current_welcome = ""
     current_voice = ""
+    current_embed_title = "🍾 自訂身分組領取專區"
+    current_embed_desc = "點擊下方對應的按鈕即可領取或移除身分組。"
+    current_buttons = []
+    
     if db is not None:
         try:
-            print(f"[Web 記錄] 正在掃描 Firestore 中有無伺服器 {guild_id} 的資料...")
+            print("[Web 記錄] 正在向 Firestore 撈取設定資料...")
             doc_ref = db.collection('guild_settings').document(guild_id)
-            doc = doc_ref.get(timeout=2)  # 超時縮短到安全範圍，避免卡網頁
-            
+            doc = doc_ref.get(timeout=1)
             if doc.exists:
-                # 發現有檔案，撈出舊資料
                 data = doc.to_dict()
                 current_welcome = str(data.get('welcome_channel', ''))
                 current_voice = str(data.get('voice_channel', ''))
-                print("[Web 記錄] 掃描完畢：發現歷史設定，成功讀取！")
-            else:
-                # 🔴 發現沒有檔案，觸發主動創建！
-                print("[Web 記錄] 掃描完畢：資料庫尚未有紀錄，正在自動為其創建初始文件...")
-                doc_ref.set({
-                    'welcome_channel': "",
-                    'voice_channel': ""
-                })
-                print("[Web 記錄] 自動創建初始文件成功！")
-        except Exception as e:
-            # 即使資料庫初次連線延遲，也只印警告並立刻跳過，100% 確保進得去頁面
-            print(f"[Web ⚠️ 異常放行] Firestore 掃描或創建超時，已先行放行網頁。原因: {e}")
+                current_embed_title = data.get('role_embed_title', current_embed_title)
+                current_embed_desc = data.get('role_embed_desc', current_embed_desc)
+                current_buttons = data.get('role_buttons', [])
+                print("[Web 記錄] 成功撈取 Firestore 歷史設定！")
+        except BaseException as e:
+            print(f"[Web ⚠️ 異常強制放行] Firestore 連線無回應，已秒級跳過。原因: {e}")
 
-    # 3. 透過標準 HTTP REST API 獲取頻道清單
+    # 4. 獲取頻道清單
     print("[Web 記錄] 正在透過 REST API 獲取頻道清單...")
     text_channels = []
     voice_channels = []
     try:
-        headers = {'Authorization': f"Bot {bot_token}"}
         channels_res = requests.get(f"{API_ENDPOINT}/guilds/{guild_id}/channels", headers=headers, timeout=5).json()
-        
         if isinstance(channels_res, list):
             for ch in channels_res:
                 ch_type = int(ch.get('type', 0))
@@ -202,8 +299,6 @@ def manage(guild_id):
                     text_channels.append({"id": str(ch.get('id')), "name": ch.get('name')})
                 elif ch_type == 2:
                     voice_channels.append({"id": str(ch.get('id')), "name": ch.get('name')})
-        else:
-            print(f"[Web 錯誤] Discord API 返回異常數據: {channels_res}")
     except Exception as e:
         print(f"[Web 錯誤] 透過 API 獲取頻道失敗: {e}")
         return "無法安全獲取伺服器頻道清單，請確認 Bot Token 是否正確且具備權限。", 500
@@ -215,8 +310,12 @@ def manage(guild_id):
         guild_id=guild_id,
         text_channels=text_channels,
         voice_channels=voice_channels,
+        roles=roles,
         current_welcome=current_welcome,
-        current_voice=current_voice
+        current_voice=current_voice,
+        current_embed_title=current_embed_title,
+        current_embed_desc=current_embed_desc,
+        current_buttons=current_buttons
     )
 
 @app.route('/save/<string:guild_id>', methods=['POST'])
@@ -226,25 +325,50 @@ def save_config(guild_id):
         
     welcome_ch = request.form.get('welcome_channel')
     voice_ch = request.form.get('voice_channel')
+    embed_title = request.form.get('role_embed_title')
+    embed_desc = request.form.get('role_embed_desc')
     
-    print(f"[Web 記錄] 正在將設定更新至 Firestore，伺服器 ID: {guild_id}")
+    # 🔴 解析動態陣列
+    labels = request.form.getlist('btn_label[]')
+    roles = request.form.getlist('btn_role[]')
+    
+    # 組合按鈕矩陣物件
+    role_buttons = []
+    for label, role_id in zip(labels, roles):
+        if label.strip() and role_id.strip(): # 過濾空白輸入
+            role_buttons.append({
+                "label": label.strip(),
+                "role_id": str(role_id).strip()
+            })
+    
+    print(f"[Web 記錄] 正在將多重設定整合更新至 Firestore，伺服器 ID: {guild_id}")
     try:
         doc_ref = db.collection('guild_settings').document(guild_id)
         doc_ref.set({
             'welcome_channel': str(welcome_ch) if welcome_ch else "",
-            'voice_channel': str(voice_ch) if voice_ch else ""
+            'voice_channel': str(voice_ch) if voice_ch else "",
+            'role_embed_title': str(embed_title) if embed_title else "🍾 自訂身分組領取專區",
+            'role_embed_desc': str(embed_desc) if embed_desc else "點擊下方對應的按鈕即可領取或移除身分組。",
+            'role_buttons': role_buttons
         }, merge=True)
         print("[Web 記錄] Firestore 更新成功！")
+        
+        # 🔴 如果機器人正在線上，即時刷新全域按鈕 View，讓新按鈕立刻免重啟生效
+        if discord_bot:
+            cog = discord_bot.get_cog("ReactionRoles")
+            if cog:
+                from cogs.reaction_roles import RoleView
+                discord_bot.add_view(RoleView(role_buttons))
+                print("[Web 連動] 已即時向機器人核心刷新持久化按鈕 View！")
         
         return f"""
         <html>
         <head><title>儲存成功</title></head>
         <body style="background: #2f3136; color: white; padding: 40px; font-family: sans-serif; text-align: center;">
             <div style="max-width: 500px; margin: 0 auto; background: #36393f; padding: 30px; border-radius: 10px;">
-                <h2>✅ 設定已提交（後端成功接收）！</h2>
+                <h2>✅ 所有進階設定皆已完美儲存！</h2>
                 <p>伺服器 ID: {guild_id}</p>
-                <p>歡迎頻道 ID: {welcome_ch if welcome_ch else '未啟用'}</p>
-                <p>語音創房 ID: {voice_ch if voice_ch else '未啟用'}</p>
+                <p>已儲存的按鈕規則數量: {len(role_buttons)} 組</p>
                 <br>
                 <a href="/manage/{guild_id}" style="background: #5865F2; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">點此返回設定頁面</a>
             </div>
@@ -299,24 +423,37 @@ def keep_alive(bot_instance):
     
     if not firebase_admin._apps:
         if os.getenv("FIREBASE_PRIVATE_KEY"):
-            cred = credentials.Certificate({
-                "type": "service_account",
-                "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-                "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace(r'\n', '\n'),
-                "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-                "token_uri": "https://oauth2.googleapis.com/token",
-            })
-            firebase_admin.initialize_app(cred)
+            try:
+                cred = credentials.Certificate({
+                    "type": "service_account",
+                    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+                    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace(r'\n', '\n'),
+                    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                })
+                firebase_admin.initialize_app(cred)
+                print("[Firebase] 成功透過環境變數初始化！")
+            except Exception as e:
+                print(f"[Firebase 錯誤] 環境變數解析失敗: {e}")
         elif os.path.exists('firebase_key.json'):
-            cred = credentials.Certificate('firebase_key.json')
-            firebase_admin.initialize_app(cred)
+            try:
+                cred = credentials.Certificate('firebase_key.json')
+                firebase_admin.initialize_app(cred)
+                print("[Firebase] 成功透過 firebase_key.json 檔案初始化！")
+            except Exception as e:
+                print(f"[Firebase 錯誤] 檔案解析失敗: {e}")
         else:
-            firebase_admin.initialize_app()
+            print("[Firebase ⚠️] 未發現任何金鑰配置，將嘗試預設初始化...")
+            try:
+                firebase_admin.initialize_app()
+            except Exception:
+                pass
 
     try:
         db = firestore.client()
+        print("[Firebase] Firestore 用戶端已就緒。")
     except Exception as e:
-        print(f"[Firebase 錯誤] Firestore 初始化失敗: {e}")
+        print(f"[Firebase 錯誤] Firestore 用戶端取得失敗: {e}")
     
     t = Thread(target=run)
     t.start()
